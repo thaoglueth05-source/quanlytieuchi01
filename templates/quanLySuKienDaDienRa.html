@@ -1,0 +1,299 @@
+{% extends "base.html" %}
+
+{% block title %}Quản lý các sự kiện đã diễn ra{% endblock %}
+
+{% block extra_css %}
+    <style>
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+        }
+
+        .btn-add {
+            background: #000;
+            color: #fff;
+        }
+
+        .btn-save {
+            background: #000;
+            color: #fff;
+            width: 100%;
+            margin-top: 15px;
+            border-radius: 4px;
+            padding: 12px;
+        }
+
+        /* Style cho trạng thái bị khóa */
+        .btn-save:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+
+        .btn-close-text {
+            background: none;
+            color: #666;
+            margin-top: 10px;
+            width: 100%;
+            text-decoration: underline;
+            border: none;
+            cursor: pointer;
+        }
+
+        .table-container {
+            background: #fff;
+            border-radius: 8px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            text-align: left;
+        }
+
+        th {
+            background: #fafafa;
+            padding: 15px 20px;
+            border-bottom: 1px solid #eee;
+            font-size: 12px;
+            color: #888;
+            text-transform: uppercase;
+        }
+
+        td {
+            padding: 15px 20px;
+            border-bottom: 1px solid #eee;
+            font-size: 14px;
+        }
+
+        .clickable-row {
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .clickable-row:hover {
+            background: #f9fafb;
+        }
+
+        .tag {
+            background: #eee;
+            padding: 3px 8px;
+            border-radius: 3px;
+            font-size: 11px;
+            margin-right: 5px;
+            color: #555;
+        }
+
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+
+        .modal-overlay.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: #fff;
+            width: 450px;
+            padding: 30px;
+            border-radius: 8px;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        .form-group label {
+            display: block;
+            font-size: 12px;
+            font-weight: 600;
+            margin-bottom: 5px;
+            color: #555;
+        }
+
+        .form-group input, .form-group select {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            outline: none;
+        }
+
+        tfoot td {
+            background: #fafafa;
+            font-weight: bold;
+            border-top: 2px solid #eee;
+        }
+
+        .filter-section {
+            margin-bottom: 15px;
+        }
+
+        .year-select {
+            padding: 8px 12px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+            outline: none;
+            min-width: 150px;
+            cursor: pointer;
+        }
+
+        .year-select:focus {
+            border-color: #000;
+        }
+    </style>
+{% endblock %}
+
+{% block content %}
+    <header style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; width: 100%;">
+        <h1>Quản lý các sự kiện đã diễn ra</h1>
+    </header>
+
+    <div class="table-container">
+        <table>
+            <thead>
+            <tr>
+                <th style="width: 50px; text-align: center;">STT</th>
+                <th>Tên sự kiện</th>
+                <th>Ngày bắt đầu</th>
+                <th>Ngày kết thúc</th>
+                <th>Tiêu Chí</th>
+                <th>Năm</th>
+                <th style="text-align: right;">Người</th>
+                <th style="text-align: right;">Số tiền</th>
+            </tr>
+            </thead>
+            <tbody>
+            {% for item in events %}
+                <tr class="clickable-row"
+                    onclick="openViewModal('{{ item.id }}', '{{ item.title }}', '{{ item.fromDate|date:'Y-m-d' }}', '{{ item.toDate|date:'Y-m-d' }}', [{% for cat in item.categories.all %}'{{ cat.id }}'{% if not forloop.last %},{% endif %}{% endfor %}], '{{ item.totalUserAllocated }}', '{{ item.totalAmount }}', '{{ item.year }}')">
+                    <td style="text-align: center; color: #999;">{{ forloop.counter }}</td>
+                    <td><strong>{{ item.title }}</strong></td>
+                    <td>{{ item.fromDate|date:"d/m/Y" }}</td>
+                    <td>{{ item.toDate|date:"d/m/Y" }}</td>
+                    <td>
+                        {% for cat in item.categories.all %}
+                            <span class="tag">{{ cat.name }}</span>
+                        {% endfor %}
+                    </td>
+                    <td><strong>{{ item.year }}</strong></td>
+                    <td style="text-align: right;">{{ item.totalUserAllocated|default:"0" }}</td>
+                    <td style="text-align: right; font-weight: bold;">
+                        <script>document.write(Number('{{ item.totalAmount|default:"0" }}').toLocaleString('vi-VN'));</script>
+                        đ
+                    </td>
+                </tr>
+            {% empty %}
+                <tr>
+                    <td colspan="7" style="text-align: center; color: #999; padding: 40px;">Chưa có dữ liệu nào.</td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <div class="modal-overlay" id="modalEvent">
+        <div class="modal-content">
+            <h3 id="modalTitle" style="margin-bottom: 20px;">Chi tiết sự kiện</h3>
+            <form id="mainForm">
+                {% csrf_token %}
+
+                <div class="form-group">
+                    <label>Tên sự kiện</label>
+                    <input type="text" name="title" id="edit_title" readonly style="background: #f5f5f5; cursor: default;">
+                </div>
+
+                <div style="display: flex; gap: 10px;">
+                    <div class="form-group" style="flex: 1;">
+                        <label>Ngày bắt đầu</label>
+                        <input type="date" name="fromDate" id="edit_fromDate" readonly style="background: #f5f5f5; cursor: default;">
+                    </div>
+                    <div class="form-group" style="flex: 1;">
+                        <label>Ngày kết thúc</label>
+                        <input type="date" name="toDate" id="edit_toDate" readonly style="background: #f5f5f5; cursor: default;">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Năm</label>
+                    <input type="number" name="year" id="edit_year" readonly style="background: #f5f5f5; cursor: default;">
+                </div>
+
+                <div style="display: flex; gap: 10px;">
+                    <div class="form-group" style="flex: 1;">
+                        <label>Số người</label>
+                        <input type="number" name="totalUserAllocated" id="edit_users" readonly style="background: #f5f5f5; cursor: default;">
+                    </div>
+                    <div class="form-group" style="flex: 1;">
+                        <label>Tổng tiền</label>
+                        <input type="text" name="totalAmount" id="edit_amount" readonly style="background: #f5f5f5; cursor: default;">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Tiêu Chí</label>
+                    <select name="danh_muc" id="edit_categories" multiple style="height: 100px;" disabled>
+                        {% for cat in all_categories %}
+                            <option value="{{ cat.id }}">{{ cat.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <button type="button" class="btn btn-close-text" onclick="closeModal()">Đóng</button>
+            </form>
+        </div>
+    </div>
+{% endblock %}
+
+{% block extra_js %}
+    <script>
+        const modal = document.getElementById('modalEvent');
+
+        function openViewModal(id, title, fromDate, toDate, categoryIds, users, amount, year) {
+            document.getElementById('modalTitle').innerText = "Chi tiết sự kiện";
+            document.getElementById('edit_title').value = title;
+            document.getElementById('edit_year').value = year;
+            document.getElementById('edit_fromDate').value = fromDate;
+            document.getElementById('edit_toDate').value = toDate;
+            document.getElementById('edit_users').value = users;
+            document.getElementById('edit_amount').value = Number(amount).toLocaleString('vi-VN') + ' đ';
+
+            const select = document.getElementById('edit_categories');
+            Array.from(select.options).forEach(option => {
+                option.selected = categoryIds.includes(option.value.toString());
+            });
+
+            modal.classList.add('active');
+        }
+
+        function closeModal() {
+            modal.classList.remove('active');
+        }
+
+        window.onclick = function (event) {
+            if (event.target == modal) closeModal();
+        }
+    </script>
+{% endblock %}
